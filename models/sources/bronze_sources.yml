@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: RETAIL_DWH
+    schema: BRONZE
+
+    tables:
+      - name: campaign_data_raw
+      - name: customers_raw
+      - name: employee_data_raw
+      - name: orders_raw_data
+      - name: product_raw_data
+      - name: store_raw_data
+      - name: supplier_raw_data
