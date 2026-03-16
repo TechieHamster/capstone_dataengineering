@@ -15,13 +15,15 @@ The project also implements **Slowly Changing Dimensions (SCD Type 2)** using db
 # Architecture
 
 Azure Data Lake Storage (ADLS)
-↓
+        ↓  
 Snowflake External Tables (Bronze Layer)
-↓
+        ↓
 dbt Staging Models (Silver Layer)
-↓
+        ↓
 Star Schema Warehouse (Gold Layer)
-↓
+        ↓
+Reporting View
+        ↓
 Analytics & Reporting
 
 ---
