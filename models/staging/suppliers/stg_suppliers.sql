@@ -7,84 +7,55 @@ WITH source AS (
 
 flattened AS (
 
-    SELECT
-        f.value:supplier_id::STRING AS supplier_id,
+SELECT
+    f.value:supplier_id::STRING AS supplier_id,
 
-        {{ clean_text("f.value:supplier_name::STRING") }} AS supplier_name,
+    {{ clean_text("f.value:supplier_name::STRING") }} AS supplier_name,
 
-        /* Contact Information */
+    {{ clean_text("f.value:contact_information.contact_person::STRING") }}
+    AS contact_person,
 
-        {{ clean_text("f.value:contact_information.contact_person::STRING") }} AS contact_person,
-        {{ clean_email("f.value:contact_information.email::STRING") }} AS email,
-        {{ mask_phone("f.value:contact_information.phone::STRING") }} AS phone,
-        {{ clean_text("f.value:contact_information.address::STRING") }} AS address,
+    {{ clean_email("f.value:contact_information.email::STRING") }} AS email,
+    {{ mask_phone("f.value:contact_information.phone::STRING") }} AS phone,
 
-        /* Supplier Details */
+    {{ clean_text("f.value:supplier_type::STRING") }} AS supplier_type,
 
-        {{ clean_text("f.value:supplier_type::STRING") }} AS supplier_type,
+    ARRAY_TO_STRING(f.value:categories_supplied, ', ')
+    AS categories_supplied,
 
-        ARRAY_TO_STRING(f.value:categories_supplied, ', ') AS categories_supplied,
+    f.value:payment_terms::STRING AS payment_terms,
 
-        {{ clean_text("f.value:payment_terms::STRING") }} AS payment_terms,
+    f.value:contract_details.contract_id::STRING AS contract_id,
 
-        /* Contract Details */
+    {{ parse_date("f.value:contract_details.start_date::STRING") }}
+    AS contract_start_date,
 
-        f.value:contract_details.contract_id::STRING AS contract_id,
+    {{ parse_date("f.value:contract_details.end_date::STRING") }}
+    AS contract_end_date,
 
-        {{ parse_date("f.value:contract_details.start_date::STRING") }} AS contract_start_date,
-        {{ parse_date("f.value:contract_details.end_date::STRING") }} AS contract_end_date,
+    f.value:performance_metrics.on_time_delivery_rate::FLOAT
+    AS on_time_delivery_rate,
 
-        f.value:contract_details.renewal_option::BOOLEAN AS renewal_option,
-        f.value:contract_details.exclusivity::BOOLEAN AS exclusivity,
+    f.value:performance_metrics.average_delay_days::FLOAT
+    AS average_delay_days,
 
-        /* Contract Duration */
+    f.value:performance_metrics.defect_rate::FLOAT AS defect_rate,
 
-        DATEDIFF(
-            day,
-            {{ parse_date("f.value:contract_details.start_date::STRING") }},
-            {{ parse_date("f.value:contract_details.end_date::STRING") }}
-        ) AS contract_duration_days,
+    f.value:lead_time_days::INTEGER AS lead_time_days,
 
-        /* Performance Metrics */
+    f.value:credit_rating::STRING AS credit_rating,
 
-        f.value:performance_metrics.on_time_delivery_rate::FLOAT AS on_time_delivery_rate,
-        f.value:performance_metrics.average_delay_days::FLOAT AS average_delay_days,
-        f.value:performance_metrics.defect_rate::FLOAT AS defect_rate,
-        f.value:performance_metrics.returns_percentage::FLOAT AS returns_percentage,
+    f.value:year_established::INTEGER AS year_established,
 
-        {{ clean_text("f.value:performance_metrics.quality_rating::STRING") }} AS quality_rating,
+    {{ parse_date("f.value:last_order_date::STRING") }} AS last_order_date,
 
-        f.value:performance_metrics.response_time_hours::INTEGER AS response_time_hours,
+    f.value:is_active::BOOLEAN AS is_active,
 
-        /* Logistics */
+    {{ parse_date("f.value:last_modified_date::STRING") }}
+    AS last_modified_date
 
-        f.value:lead_time_days::INTEGER AS lead_time_days,
-        f.value:minimum_order_quantity::INTEGER AS minimum_order_quantity,
-
-        {{ clean_text("f.value:preferred_carrier::STRING") }} AS preferred_carrier,
-
-        /* Business Info */
-
-        f.value:credit_rating::STRING AS credit_rating,
-        f.value:tax_id::STRING AS tax_id,
-        f.value:year_established::INTEGER AS year_established,
-
-        {{ clean_text("f.value:website::STRING") }} AS website,
-
-        /* Supplier Age */
-
-        YEAR(CURRENT_DATE) - f.value:year_established::INTEGER
-        AS supplier_age_years,
-
-        /* Activity Status */
-
-        f.value:is_active::BOOLEAN AS is_active,
-
-        {{ parse_date("f.value:last_order_date::STRING") }} AS last_order_date,
-        {{ parse_date("f.value:last_modified_date::STRING") }} AS last_modified_date
-
-    FROM source,
-    LATERAL FLATTEN(input => raw_data:suppliers_data) f
+FROM source,
+LATERAL FLATTEN(input => raw_data:suppliers_data) f
 
 )
 

@@ -7,43 +7,72 @@ WITH source AS (
 
 flattened AS (
 
-    SELECT
-        f.value:customer_id::STRING AS customer_id,
+SELECT
+    f.value:customer_id::STRING AS customer_id,
 
-        {{ clean_text("f.value:first_name::STRING") }} AS first_name,
-        {{ clean_text("f.value:last_name::STRING") }} AS last_name,
+    INITCAP(TRIM(f.value:first_name::STRING)) AS first_name,
+    INITCAP(TRIM(f.value:last_name::STRING)) AS last_name,
 
-        {{ clean_email("f.value:email::STRING") }} AS email,
+    CONCAT(
+        INITCAP(TRIM(f.value:first_name::STRING)),
+        ' ',
+        INITCAP(TRIM(f.value:last_name::STRING))
+    ) AS full_name,
 
-        {{ mask_phone("f.value:phone::STRING") }} AS phone,
+    LOWER(TRIM(f.value:email::STRING)) AS email,
 
-        {{ parse_date("f.value:birth_date::STRING") }} AS birth_date,
-        {{ parse_date("f.value:registration_date::STRING") }} AS registration_date,
+    REGEXP_REPLACE(f.value:phone::STRING,'[^0-9]','') AS phone_number,
 
-        {{ clean_text("f.value:preferred_communication::STRING") }} AS preferred_communication,
-        {{ clean_text("f.value:occupation::STRING") }} AS occupation,
-        {{ clean_text("f.value:income_bracket::STRING") }} AS income_bracket,
-        {{ clean_text("f.value:loyalty_tier::STRING") }} AS loyalty_tier,
+    /* handle multiple date formats */
 
-        f.value:total_purchases::INTEGER AS total_purchases,
-        f.value:total_spend::NUMBER(12,2) AS total_spend,
+    COALESCE(
+        TRY_TO_DATE(f.value:birth_date::STRING,'YYYY-MM-DD'),
+        TRY_TO_DATE(f.value:birth_date::STRING,'DD-MM-YYYY')
+    ) AS birth_date,
 
-        {{ clean_text("f.value:preferred_payment_method::STRING") }} AS preferred_payment_method,
-        f.value:marketing_opt_in::BOOLEAN AS marketing_opt_in,
+    TRY_TO_DATE(f.value:registration_date::STRING) AS registration_date,
 
-        {{ parse_date("f.value:last_purchase_date::STRING") }} AS last_purchase_date,
-        {{ parse_date("f.value:last_modified_date::STRING") }} AS last_modified_date,
+    /* customer age */
 
-        /* Address Flattening */
+    DATEDIFF(year,
+        COALESCE(
+            TRY_TO_DATE(f.value:birth_date::STRING,'YYYY-MM-DD'),
+            TRY_TO_DATE(f.value:birth_date::STRING,'DD-MM-YYYY')
+        ),
+        CURRENT_DATE
+    ) AS age,
 
-        {{ clean_text("f.value:address.street::STRING") }} AS street,
-        {{ clean_text("f.value:address.city::STRING") }} AS city,
-        f.value:address.state::STRING AS state,
-        f.value:address.zip_code::STRING AS zip_code,
-        {{ clean_text("f.value:address.country::STRING") }} AS country
+    /* customer segment */
 
-    FROM source,
-    LATERAL FLATTEN(input => raw_data:customers_data) f
+    CASE
+        WHEN DATEDIFF(year,
+            TRY_TO_DATE(f.value:birth_date::STRING),
+            CURRENT_DATE) BETWEEN 18 AND 35 THEN 'Young'
+
+        WHEN DATEDIFF(year,
+            TRY_TO_DATE(f.value:birth_date::STRING),
+            CURRENT_DATE) BETWEEN 36 AND 55 THEN 'Middle Aged'
+
+        ELSE 'Senior'
+    END AS customer_segment,
+
+    /* address */
+
+    INITCAP(f.value:address.street::STRING) AS street,
+    INITCAP(f.value:address.city::STRING) AS city,
+    f.value:address.state::STRING AS state,
+    f.value:address.zip_code::STRING AS zip_code,
+    f.value:address.country::STRING AS country,
+
+    f.value:loyalty_tier::STRING AS loyalty_tier,
+    f.value:total_purchases::INTEGER AS total_purchases,
+    f.value:total_spend::NUMBER(12,2) AS total_spend,
+
+    TRY_TO_DATE(f.value:last_purchase_date::STRING) AS last_purchase_date,
+    TRY_TO_DATE(f.value:last_modified_date::STRING) AS last_modified_date
+
+FROM source,
+LATERAL FLATTEN(input => raw_data:customers_data) f
 
 )
 
