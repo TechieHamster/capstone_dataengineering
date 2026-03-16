@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: fact_sales
+    description: "Central fact table capturing sales transactions at product level"
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+
+      - name: product_id
+        tests:
+          - not_null
+
+  - name: fact_inventory
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+
+  - name: fact_marketing_performance
+    columns:
+      - name: campaign_id
+        tests:
+          - not_null
