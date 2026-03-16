@@ -10,20 +10,20 @@ flattened AS (
     SELECT
         f.value:store_id::STRING AS store_id,
 
-        INITCAP(f.value:store_name::STRING) AS store_name,
+        {{ clean_text("f.value:store_name::STRING") }} AS store_name,
 
         /* Address fields */
 
-        f.value:address.street::STRING AS street,
-        f.value:address.city::STRING AS city,
+        {{ clean_text("f.value:address.street::STRING") }} AS street,
+        {{ clean_text("f.value:address.city::STRING") }} AS city,
         f.value:address.state::STRING AS state,
         f.value:address.zip_code::STRING AS zip_code,
-        f.value:address.country::STRING AS country,
+        {{ clean_text("f.value:address.country::STRING") }} AS country,
 
-        INITCAP(f.value:region::STRING) AS region,
-        INITCAP(f.value:store_type::STRING) AS store_type,
+        {{ clean_text("f.value:region::STRING") }} AS region,
+        {{ clean_text("f.value:store_type::STRING") }} AS store_type,
 
-        f.value:opening_date::DATE AS opening_date,
+        {{ parse_date("f.value:opening_date::STRING") }} AS opening_date,
 
         f.value:size_sq_ft::INTEGER AS size_sq_ft,
 
@@ -37,8 +37,8 @@ flattened AS (
 
         f.value:manager_id::STRING AS manager_id,
 
-        f.value:phone_number::STRING AS phone_number,
-        LOWER(f.value:email::STRING) AS email,
+        {{ mask_phone("f.value:phone_number::STRING") }} AS phone_number,
+        {{ clean_email("f.value:email::STRING") }} AS email,
 
         /* Operating hours */
 
@@ -73,7 +73,7 @@ flattened AS (
         NULLIF(f.value:employee_count::NUMBER,0))
         AS revenue_per_employee,
 
-        f.value:last_modified_date::DATE AS last_modified_date
+        {{ parse_date("f.value:last_modified_date::STRING") }} AS last_modified_date
 
     FROM source,
     LATERAL FLATTEN(input => raw_data:stores_data) f
