@@ -6,6 +6,7 @@ WITH date_spine AS(
         ) AS date_day
     FROM TABLE(GENERATOR(ROWCOUNT => 3650))
 ),
+
 final AS(
     SELECT 
         date_day AS date_key,

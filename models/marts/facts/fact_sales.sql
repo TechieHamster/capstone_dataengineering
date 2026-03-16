@@ -1,45 +1,53 @@
+{{ config(
+    materialized='incremental',
+    unique_key=['order_id','product_id']
+) }}
+
 WITH orders AS (
 
     SELECT *
     FROM {{ ref('stg_orders') }}
 
-)
-,
+    {% if is_incremental() %}
+        WHERE order_date >= (
+            SELECT COALESCE(MAX(order_date),'1900-01-01')
+            FROM {{ this }}
+        )
+    {% endif %}
 
-final AS (
+),
+
+deduplicated AS (
+
+SELECT *
+FROM orders
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY order_id, product_id
+    ORDER BY order_date DESC
+) = 1
+
+)
 
 SELECT
+    order_id,
+    product_id,
+    customer_id,
+    store_id,
+    employee_id,
+    campaign_id,
 
-    /* identifiers */
+    CAST(order_date AS DATE) AS order_date,
 
-    o.order_id,
-    o.product_id,
-    o.customer_id,
-    o.store_id,
-    o.employee_id,
-    o.campaign_id,
+    quantity,
+    unit_price,
+    cost_price,
 
-    CAST(o.order_date AS DATE) AS order_date,
+    gross_sales,
+    total_cost,
+    profit_amount,
 
-    /* metrics */
+    order_year,
+    order_month,
+    order_time_of_day
 
-    o.quantity,
-
-    o.unit_price,
-    o.cost_price,
-
-    o.gross_sales,
-    o.total_cost,
-    o.profit_amount,
-
-    /* time fields */
-
-    o.order_year,
-    o.order_month,
-    o.order_time_of_day
-
-FROM orders o
-
-)
-
-SELECT * FROM final
+FROM deduplicated
